@@ -1,17 +1,17 @@
-# sample-tracing-python
+# ARTEKMED Log-Client for OpenObserve
 
 ## Installation
 
 #### Clone this repositiory
 
 ```
-git clone https://github.com/openobserve/sample-tracing-python.git
+git clone https://github.com/TUM-CAMP-NARVIS/artekmed_zenoh_openobserve_logger.git
 ```
 
 #### Navigate to your project directory
 
 ```
-cd sample-tracing-python
+cd artekmed_zenoh_openobserve_logger
 ```
 
 #### Create the virtual environment
@@ -40,8 +40,13 @@ On Windows:
 pip install -r requirements.txt
 ```
 
+#### Set Environment Variables
+```
+export OPENOBSERVE_NODE_NAME=narvis
+```
+
 #### Start application
 
 ```
-python3 app.py
+python3 main.py --query tcn/loc/*/*/str/logs
 ```
