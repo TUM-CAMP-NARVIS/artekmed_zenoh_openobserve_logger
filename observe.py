@@ -23,8 +23,8 @@ set_logger_provider(logger_provider)
 otlp_exporter = OTLPLogExporter(endpoint="http://collector:4317", insecure=True)
 logger_provider.add_log_record_processor(BatchLogRecordProcessor(otlp_exporter))
 
-# console_exporter = ConsoleLogExporter()
-# logger_provider.add_log_record_processor(BatchLogRecordProcessor(console_exporter))
+#console_exporter = ConsoleLogExporter()
+#logger_provider.add_log_record_processor(BatchLogRecordProcessor(console_exporter))
 
 handler = LoggingHandler(level=logging.NOTSET, logger_provider=logger_provider)
 

@@ -20,9 +20,10 @@ def main():
 
     log_query = args.query
 
+    node_name = os.environ.get("OPENOBSERVE_NODE_NAME", "narvis")
     # Attach OTLP handler to root logger
     logging.getLogger().addHandler(handler)
-    logger = logging.getLogger(os.environ.get("OPENOBSERVE_NODE_NAME", "narvis"))
+    logger = logging.getLogger(node_name)
     logger.setLevel(logging.DEBUG)
 
     # @todo: maybe define max-log-level as cmdline arg and use LogLevelType to decide (debug vs. trace)
@@ -35,6 +36,13 @@ def main():
     LVL_MAP[schema.LogLevelType.HL2_LOG_DEBUG] = logger.debug
     LVL_MAP[schema.LogLevelType.HL2_LOG_TRACE] = logger.debug
 
+    LVL = {}
+    LVL[schema.LogLevelType.HL2_LOG_ERROR] = logging.ERROR
+    LVL[schema.LogLevelType.HL2_LOG_WARNING] = logging.WARNING
+    LVL[schema.LogLevelType.HL2_LOG_INFO] = logging.INFO
+    LVL[schema.LogLevelType.HL2_LOG_DEBUG] = logging.DEBUG
+    LVL[schema.LogLevelType.HL2_LOG_TRACE] = logging.DEBUG
+
     # Log handler
     def log_handler(sample):
         try:
@@ -42,7 +50,10 @@ def main():
             sender = message.header.frame_id
             for item in message.items:
                 # print("{} >> {}".format(sender, item.message[:-1]))
-                LVL_MAP[item.severity]("{} >> {}".format(sender, item.message[:-1]))
+                record = logger.makeRecord(node_name, LVL[item.severity], sender, 0, item.message[:-1],
+                                           (), None, "log", None)
+                logger.handle(record)
+                # LVL_MAP[item.severity]("{} >> {}".format(sender, item.message[:-1]))
         except Exception as e:
             logger.error("Error while decoding the LogMessage.")
 
