@@ -15,6 +15,8 @@ def main():
     parser = argparse.ArgumentParser(description='Zenoh log-subscriber forwarding to openobserve.')
     parser.add_argument('--query', metavar='query', type=str, default='tcn/loc/*/*/str/logs',
                         help='query for retrieving the logs')
+    parser.add_argument('--zenoh-config', metavar='zenoh_config', type=str, default='/config/zenoh_config.json5',
+                        help='Zenoh Configuration File')
 
     args = parser.parse_args()
 
@@ -25,6 +27,11 @@ def main():
     logging.getLogger().addHandler(handler)
     logger = logging.getLogger(node_name)
     logger.setLevel(logging.DEBUG)
+
+    zenoh_config_filepath = pathlib.Path(args.zenoh_config)
+    if not zenoh_config_filepath.is_file():
+        logger.error(f"Invalid Zenoh Configuration File: {zenoh_config_filepath}")
+        exit(1)
 
     # @todo: maybe define max-log-level as cmdline arg and use LogLevelType to decide (debug vs. trace)
 
@@ -57,9 +64,23 @@ def main():
         except Exception as e:
             logger.error("Error while decoding the LogMessage.")
 
-    z = zenoh.open(zenoh.Config())
+
+    # start Zenoh services
+    zenoh.init_logger()
+    zenoh_connected = False
+    while not zenoh_connected:
+        try:
+            session = zenoh.open(zenoh.Config.from_json5(open(zenoh_config_filepath, "r").read()))
+            zenoh_connected = True
+        except zenoh.ZError as e:
+            logger.warn(f"Error connecting to zenoh router: {e}")
+            logger.info("Waiting 2 seconds before retrying")
+            time.sleep(2)
+        except KeyboardInterrupt:
+            exit(0)
+
     logger.info(f"Listening for logs on '{log_query}'")
-    subscriber = z.declare_subscriber(log_query, log_handler)
+    subscriber = session.declare_subscriber(log_query, log_handler)
 
     print("Enter 'q' or ctrl-c to quit...")
     try:
