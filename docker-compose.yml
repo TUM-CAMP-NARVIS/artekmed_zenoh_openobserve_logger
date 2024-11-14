@@ -2,14 +2,14 @@ services:
   collector:
     image: otel/opentelemetry-collector-contrib:latest
     volumes:
-    - ./otel-config.yaml:/etc/otelcol-contrib/config.yaml
+      - ./otel-config.yaml:/etc/otelcol-contrib/config.yaml
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
     ports:
-    - "4317:4317"
+      - "4317:4317"
   zenoh-logger:
     build: .
     #network_mode: "host"
     command: python main.py --query ${ZENOH_TOPIC_QUERY}
     volumes:
-    - .:/usr/src/app
-    - ./zenohd_config.json5:/config/zenoh_config.json5:ro
+      - .:/usr/src/app
+      - ./zenohd_config.json5:/config/zenoh_config.json5:ro

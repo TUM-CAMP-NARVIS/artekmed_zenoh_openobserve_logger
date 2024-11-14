@@ -4,10 +4,59 @@ import os
 import zenoh
 import logging
 import argparse
+import pathlib
 
-from observe import handler, logger_provider
+#from observe import handler, logger_provider
 
-import schema
+from opentelemetry._logs import set_logger_provider
+from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
+from opentelemetry.sdk._logs.export import ConsoleLogExporter
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry.sdk.resources import Resource
+
+from enum import Enum, auto
+from dataclasses import dataclass, field
+from pycdr2 import IdlStruct, IdlEnum
+from pycdr2.types import int32, uint8, uint16, uint32, uint64, float32, float64, sequence, array
+
+class LogLevelType(IdlEnum, typename="LogLevelType"):
+    HL2_LOG_ERROR = auto()
+    HL2_LOG_WARNING = auto()
+    HL2_LOG_INFO = auto()
+    HL2_LOG_DEBUG = auto()
+    HL2_LOG_TRACE = auto()
+
+
+@dataclass
+class Time(IdlStruct, typename="Time"):
+    sec: int32
+    nanosec: uint32
+
+
+@dataclass
+class Duration(IdlStruct, typename="Duration"):
+    sec: int32
+    nanosec: uint32
+
+
+@dataclass
+class Header(IdlStruct, typename="Header"):
+    stamp: Time
+    frame_id: str
+
+
+@dataclass
+class LogItem(IdlStruct, typename="LogItem"):
+    timestamp: Time
+    severity: LogLevelType
+    message: str
+
+
+@dataclass
+class LogMessage(IdlStruct, typename="LogMessage"):
+    header: Header
+    items: sequence[LogItem]
 
 
 # Main function
@@ -17,12 +66,38 @@ def main():
                         help='query for retrieving the logs')
     parser.add_argument('--zenoh-config', metavar='zenoh_config', type=str, default='/config/zenoh_config.json5',
                         help='Zenoh Configuration File')
+    parser.add_argument('--collector-url', metavar='collector_url', type=str, default='http://collector:4137',
+                        help='Telemetry Collector URL')
 
     args = parser.parse_args()
 
     log_query = args.query
+    collector_url = args.collector_url
 
     node_name = os.environ.get("OPENOBSERVE_NODE_NAME", "narvis")
+
+    logging.basicConfig(level=logging.INFO)
+
+    # create OTLP Logger
+    logger_provider = LoggerProvider(
+        resource=Resource.create(
+            {
+                "service.name": "artekmed",
+                "service.instance.id": os.environ.get("OPENOBSERVE_NODE_NAME", "narvis"),
+            }
+        ),
+    )
+    set_logger_provider(logger_provider)
+
+    otlp_exporter = OTLPLogExporter(endpoint=collector_url, insecure=True)
+    logger_provider.add_log_record_processor(BatchLogRecordProcessor(otlp_exporter))
+
+    #console_exporter = ConsoleLogExporter()
+    #logger_provider.add_log_record_processor(BatchLogRecordProcessor(console_exporter))
+
+    handler = LoggingHandler(level=logging.NOTSET, logger_provider=logger_provider)
+
+
     # Attach OTLP handler to root logger
     logging.getLogger().addHandler(handler)
     logger = logging.getLogger(node_name)
@@ -33,27 +108,29 @@ def main():
         logger.error(f"Invalid Zenoh Configuration File: {zenoh_config_filepath}")
         exit(1)
 
+    logger.info(f"Loading zenoh config from: {zenoh_config_filepath}")
+
     # @todo: maybe define max-log-level as cmdline arg and use LogLevelType to decide (debug vs. trace)
 
     # setup callbacks
     LVL_MAP = {}
-    LVL_MAP[schema.LogLevelType.HL2_LOG_ERROR] = logger.error
-    LVL_MAP[schema.LogLevelType.HL2_LOG_WARNING] = logger.warning
-    LVL_MAP[schema.LogLevelType.HL2_LOG_INFO] = logger.info
-    LVL_MAP[schema.LogLevelType.HL2_LOG_DEBUG] = logger.debug
-    LVL_MAP[schema.LogLevelType.HL2_LOG_TRACE] = logger.debug
+    LVL_MAP[LogLevelType.HL2_LOG_ERROR] = logger.error
+    LVL_MAP[LogLevelType.HL2_LOG_WARNING] = logger.warning
+    LVL_MAP[LogLevelType.HL2_LOG_INFO] = logger.info
+    LVL_MAP[LogLevelType.HL2_LOG_DEBUG] = logger.debug
+    LVL_MAP[LogLevelType.HL2_LOG_TRACE] = logger.debug
 
     LVL = {}
-    LVL[schema.LogLevelType.HL2_LOG_ERROR] = logging.ERROR
-    LVL[schema.LogLevelType.HL2_LOG_WARNING] = logging.WARNING
-    LVL[schema.LogLevelType.HL2_LOG_INFO] = logging.INFO
-    LVL[schema.LogLevelType.HL2_LOG_DEBUG] = logging.DEBUG
-    LVL[schema.LogLevelType.HL2_LOG_TRACE] = logging.DEBUG
+    LVL[LogLevelType.HL2_LOG_ERROR] = logging.ERROR
+    LVL[LogLevelType.HL2_LOG_WARNING] = logging.WARNING
+    LVL[LogLevelType.HL2_LOG_INFO] = logging.INFO
+    LVL[LogLevelType.HL2_LOG_DEBUG] = logging.DEBUG
+    LVL[LogLevelType.HL2_LOG_TRACE] = logging.DEBUG
 
     # Log handler
     def log_handler(sample):
         try:
-            message = schema.LogMessage.deserialize(sample.payload)
+            message = LogMessage.deserialize(sample.payload)
             sender = message.header.frame_id
             for item in message.items:
                 # print("{} >> {}".format(sender, item.message[:-1]))
