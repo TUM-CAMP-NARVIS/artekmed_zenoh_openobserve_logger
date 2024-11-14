@@ -76,7 +76,7 @@ def main():
 
     node_name = os.environ.get("OPENOBSERVE_NODE_NAME", "narvis")
 
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
 
     # create OTLP Logger
     logger_provider = LoggerProvider(

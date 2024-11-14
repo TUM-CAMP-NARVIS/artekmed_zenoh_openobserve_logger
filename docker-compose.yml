@@ -8,8 +8,8 @@ services:
       - "4317:4317"
   zenoh-logger:
     build: .
-    #network_mode: "host"
-    command: python main.py --query ${ZENOH_TOPIC_QUERY}
+    network_mode: "host"
+    command: python main.py --query ${ZENOH_TOPIC_QUERY} --collector ${COLLECTOR_URL}
     volumes:
       - .:/usr/src/app
       - ./zenohd_config.json5:/config/zenoh_config.json5:ro

@@ -2,11 +2,18 @@ receivers:
   otlp:
     protocols:
       grpc:
+        endpoint: 0.0.0.0:4317
 exporters:
-  debug:
-    verbosity: detailed
+  otlp/openobserve:
+      endpoint: observe.artekmed.ksv1.lan:5081
+      headers:
+        Authorization: "Basic [key from openobserve]"
+        organization: default
+        stream-name: default
+      tls:
+        insecure: true
 service:
   pipelines:
     logs:
       receivers: [ otlp ]
-      exporters: [ debug ]
+      exporters: [ otlp/openobserve ]
