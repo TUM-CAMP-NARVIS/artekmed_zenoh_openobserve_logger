@@ -9,6 +9,6 @@ services:
   zenoh-logger:
     build: .
     #network_mode: "host"
-    command: python main.py --query tcn/loc/*/*/str/logs
+    command: python main.py --query ${ZENOH_TOPIC_QUERY}
     volumes:
     - .:/usr/src/app
