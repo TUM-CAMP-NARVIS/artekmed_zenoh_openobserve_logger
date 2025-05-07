@@ -130,7 +130,7 @@ def main():
     # Log handler
     def log_handler(sample):
         try:
-            message = LogMessage.deserialize(sample.payload)
+            message = LogMessage.deserialize(sample.payload.to_bytes())
             sender = message.header.frame_id
             for item in message.items:
                 # print("{} >> {}".format(sender, item.message[:-1]))
@@ -143,7 +143,7 @@ def main():
 
 
     # start Zenoh services
-    zenoh.init_logger()
+    zenoh.try_init_log_from_env()
     zenoh_connected = False
     while not zenoh_connected:
         try:
