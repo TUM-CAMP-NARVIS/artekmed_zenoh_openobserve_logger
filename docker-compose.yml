@@ -13,3 +13,7 @@ services:
     volumes:
       - .:/usr/src/app
       - ./zenohd_config.json5:/config/zenoh_config.json5:ro
+      - ./zenoh_client.crt:/config/zenoh_client.crt:ro
+      - ./zenoh_client.key:/config/zenoh_client.key:ro
+      - ./zenoh_rootca.crt:/config/zenoh_rootca.crt:ro
+

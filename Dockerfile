@@ -3,7 +3,7 @@ LABEL authors="Ulrich Eck"
 
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential git cmake python-dev && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential git cmake python3-dev && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/app
